@@ -10,10 +10,18 @@ import (
 	"github.com/kardianos/service"
 )
 
+var Service service.Service
+
 type program struct{}
 
 func (p *program) Start(s service.Service) error {
-	go server.StartServer()
+	go func() {
+		err := server.StartServer()
+		if err != nil {
+			fmt.Println(err)
+			Service.Stop()
+		}
+	}()
 	fmt.Println("Start success")
 	return nil
 }
@@ -35,6 +43,7 @@ func main() {
 
 	prg := &program{}
 	s, err := service.New(prg, svcConfig)
+	Service = s
 	if err != nil {
 		fmt.Println(err)
 		return

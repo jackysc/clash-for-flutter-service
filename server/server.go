@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/gorilla/websocket"
@@ -21,6 +22,7 @@ var (
 )
 
 var (
+	MaxLog      int                        = 1000
 	Status      string                     = StatusStopped
 	Logs        []string                   = make([]string, 0)
 	logsClients map[string]*websocket.Conn = make(map[string]*websocket.Conn)
@@ -39,13 +41,14 @@ type startArgs struct {
 	Args []string `json:"args"`
 }
 
-func StartServer() {
+func StartServer() error {
 	go sendLogToWebSocket()
 	http.HandleFunc("/start", handleReqStart)
 	http.HandleFunc("/stop", handleReqStop)
 	http.HandleFunc("/status", hanldeReqStatus)
 	http.HandleFunc("/logs", hanldeReqLogs)
-	http.ListenAndServe("127.0.0.1:9089", nil)
+	err := http.ListenAndServe("127.0.0.1:9089", nil)
+	return err
 }
 
 func checkRequest(w http.ResponseWriter, r *http.Request) (reject bool) {
@@ -54,6 +57,11 @@ func checkRequest(w http.ResponseWriter, r *http.Request) (reject bool) {
 		w.WriteHeader(403)
 	}
 	return reject
+}
+
+func FileIsExist(path string) bool {
+	_, err := os.Lstat(path)
+	return !os.IsNotExist(err)
 }
 
 func hanldeReqStatus(w http.ResponseWriter, r *http.Request) {
@@ -138,10 +146,30 @@ func handleReqStart(w http.ResponseWriter, r *http.Request) {
 }
 
 func startClash(args []string) {
-
 	file, _ := os.Executable()
-	path, name := filepath.Split(file)
-	clashCorePath := filepath.Join(path, strings.Replace(name, "-service", "", 1))
+	path := filepath.Dir(file)
+
+	ext := ""
+	if runtime.GOOS == "windows" {
+		ext = ".exe"
+	}
+	name := fmt.Sprintf("clash-%s-%s%s", runtime.GOOS, runtime.GOARCH, ext)
+	clashCorePath := filepath.Join(path, name)
+	d, _ := os.Getwd()
+	EchoLog("pwd is: ", d)
+	if !FileIsExist(clashCorePath) {
+		// for dev
+		d, _ := os.Getwd()
+		EchoLog("pwd is: ", d)
+		clashCorePath = filepath.Join(d, name)
+		if !FileIsExist(clashCorePath) {
+			EchoLog("Clash Core Is Not Exist")
+			return
+		}
+	}
+
+	fmt.Println(FileIsExist(clashCorePath))
+
 	EchoLog("Clash Core Path Is: ", clashCorePath)
 	EchoLog("Args Is: ", args)
 
@@ -174,7 +202,7 @@ func sendLogToWebSocket() {
 	for {
 		log := <-logChan
 		Logs = append(Logs, log)
-		if len(Logs) > 1000 {
+		if len(Logs) > MaxLog {
 			Logs = Logs[1:]
 		}
 		for _, c := range logsClients {
