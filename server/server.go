@@ -75,8 +75,8 @@ func hanldeReqStatus(w http.ResponseWriter, r *http.Request) {
 	res := make(map[string]interface{})
 	res["code"] = 0
 	res["status"] = Status
-	w.Header().Set("Content-Type", "application/json")
 	json, _ := json.Marshal(res)
+	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte(json))
 }
 
@@ -116,11 +116,13 @@ func handleReqStop(w http.ResponseWriter, r *http.Request) {
 	res := make(map[string]interface{})
 	if Status == StatusRunning && Cmd != nil {
 		Cmd.Process.Kill()
+		Cmd.Process.Wait()
 		res["code"] = 0
 	} else {
 		res["code"] = 1
 	}
 	json, _ := json.Marshal(res)
+	w.Header().Set("Content-Type", "application/json")
 	w.Write(json)
 }
 
@@ -142,6 +144,7 @@ func handleReqStart(w http.ResponseWriter, r *http.Request) {
 		res["code"] = 0
 	}
 	json, _ := json.Marshal(res)
+	w.Header().Set("Content-Type", "application/json")
 	w.Write(json)
 }
 
