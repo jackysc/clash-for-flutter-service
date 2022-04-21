@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/csj8520/clash-for-flutter-service/constant"
 	"github.com/gorilla/websocket"
 )
 
@@ -45,7 +46,7 @@ func StartServer() error {
 	go sendLogToWebSocket()
 	http.HandleFunc("/start", handleReqStart)
 	http.HandleFunc("/stop", handleReqStop)
-	http.HandleFunc("/status", hanldeReqStatus)
+	http.HandleFunc("/info", hanldeReqInfo)
 	http.HandleFunc("/logs", hanldeReqLogs)
 	err := http.ListenAndServe("127.0.0.1:9089", nil)
 	return err
@@ -64,7 +65,7 @@ func FileIsExist(path string) bool {
 	return !os.IsNotExist(err)
 }
 
-func hanldeReqStatus(w http.ResponseWriter, r *http.Request) {
+func hanldeReqInfo(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	reject := checkRequest(w, r)
 
@@ -75,6 +76,8 @@ func hanldeReqStatus(w http.ResponseWriter, r *http.Request) {
 	res := make(map[string]interface{})
 	res["code"] = 0
 	res["status"] = Status
+	res["mode"] = os.Args[1]
+	res["version"] = constant.Version
 	json, _ := json.Marshal(res)
 	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte(json))

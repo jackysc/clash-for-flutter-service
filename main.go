@@ -39,6 +39,7 @@ func main() {
 		Name:        "clash-for-flutter-service",
 		DisplayName: "Clash For Flutter Service",
 		Description: "This is a Clash For Flutter Service.",
+		Arguments:   []string{"service-mode"},
 	}
 
 	prg := &program{}
@@ -66,13 +67,17 @@ func main() {
 				handleRestart(s)
 			case "version":
 				handleVersion(s)
+			case "service-mode":
+				handleRun(s)
+			case "user-mode":
+				handleRun(s)
 			default:
 				fmt.Println("Command does not exist")
 			}
 		}
 
 	} else {
-		handleRun(s)
+		fmt.Println("Please use command: install, uninstall, status, start, stop, restart, version, service-mode, user-mode")
 	}
 
 }
