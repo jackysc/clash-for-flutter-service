@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -27,8 +28,12 @@ func (p *program) Start(s service.Service) error {
 }
 
 func (p *program) Stop(s service.Service) error {
+	if server.Server != nil {
+		server.Server.Shutdown(context.TODO())
+	}
 	if server.Cmd != nil {
 		server.Cmd.Process.Kill()
+		server.Cmd.Process.Wait()
 	}
 	fmt.Println("Stop success")
 	return nil

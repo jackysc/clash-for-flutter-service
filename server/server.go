@@ -23,6 +23,7 @@ var (
 )
 
 var (
+	Server      *http.Server
 	MaxLog      int                        = 1000
 	Status      string                     = StatusStopped
 	Logs        []string                   = make([]string, 0)
@@ -43,12 +44,13 @@ type startArgs struct {
 }
 
 func StartServer() error {
+	Server = &http.Server{Addr: "127.0.0.1:9089"}
 	go sendLogToWebSocket()
 	http.HandleFunc("/start", handleReqStart)
 	http.HandleFunc("/stop", handleReqStop)
 	http.HandleFunc("/info", hanldeReqInfo)
 	http.HandleFunc("/logs", hanldeReqLogs)
-	err := http.ListenAndServe("127.0.0.1:9089", nil)
+	err := Server.ListenAndServe()
 	return err
 }
 
@@ -120,9 +122,11 @@ func handleReqStop(w http.ResponseWriter, r *http.Request) {
 	if Status == StatusRunning && Cmd != nil {
 		Cmd.Process.Kill()
 		Cmd.Process.Wait()
+		Status = StatusStopped
 		res["code"] = 0
 	} else {
 		res["code"] = 1
+		res["msg"] = "clash core is not running"
 	}
 	json, _ := json.Marshal(res)
 	w.Header().Set("Content-Type", "application/json")
@@ -139,6 +143,7 @@ func handleReqStart(w http.ResponseWriter, r *http.Request) {
 
 	if Status == StatusRunning {
 		res["code"] = 1
+		res["msg"] = "clash core is running"
 	} else {
 		body, _ := ioutil.ReadAll(r.Body)
 		parmas := &startArgs{}
