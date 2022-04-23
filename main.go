@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/csj8520/clash-for-flutter-service/constant"
 	"github.com/csj8520/clash-for-flutter-service/server"
@@ -16,15 +17,28 @@ var Service service.Service
 type program struct{}
 
 func (p *program) Start(s service.Service) error {
-	go func() {
-		err := server.StartServer()
-		if err != nil {
-			fmt.Println(err)
-			Service.Stop()
-		}
-	}()
+	go p.run()
 	fmt.Println("Start success")
 	return nil
+}
+
+func (p *program) run() {
+	err := server.StartServer()
+	if err != nil {
+		fmt.Println(err)
+		if strings.Contains(err.Error(), "http: Server closed") {
+			return
+		}
+		if strings.Contains(err.Error(), "bind: address already in use") {
+			if os.Args[1] == "service-mode" {
+				Service.Stop()
+			} else {
+				p.Stop(Service)
+				os.Exit(101)
+			}
+		}
+
+	}
 }
 
 func (p *program) Stop(s service.Service) error {
@@ -40,6 +54,12 @@ func (p *program) Stop(s service.Service) error {
 }
 
 func main() {
+
+	if len(os.Args) <= 1 {
+		fmt.Println("Please use command: install, uninstall, status, start, stop, restart, version, service-mode, user-mode")
+		return
+	}
+
 	svcConfig := &service.Config{
 		Name:        "clash-for-flutter-service",
 		DisplayName: "Clash For Flutter Service",
@@ -55,34 +75,29 @@ func main() {
 		return
 	}
 
-	if len(os.Args) > 1 {
-		for _, it := range os.Args[1:] {
-			switch it {
-			case "install":
-				handleInstall(s)
-			case "uninstall":
-				handleUnInstall(s)
-			case "status":
-				handleStatus(s)
-			case "start":
-				handleStart(s)
-			case "stop":
-				handleStop(s)
-			case "restart":
-				handleRestart(s)
-			case "version":
-				handleVersion(s)
-			case "service-mode":
-				handleRun(s)
-			case "user-mode":
-				handleRun(s)
-			default:
-				fmt.Println("Command does not exist")
-			}
+	for _, it := range os.Args[1:] {
+		switch it {
+		case "install":
+			handleInstall(s)
+		case "uninstall":
+			handleUnInstall(s)
+		case "status":
+			handleStatus(s)
+		case "start":
+			handleStart(s)
+		case "stop":
+			handleStop(s)
+		case "restart":
+			handleRestart(s)
+		case "version":
+			handleVersion(s)
+		case "service-mode":
+			handleRun(s)
+		case "user-mode":
+			handleRun(s)
+		default:
+			fmt.Println("Command does not exist")
 		}
-
-	} else {
-		fmt.Println("Please use command: install, uninstall, status, start, stop, restart, version, service-mode, user-mode")
 	}
 
 }

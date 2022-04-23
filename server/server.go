@@ -166,8 +166,7 @@ func startClash(args []string) {
 	}
 	name := fmt.Sprintf("clash-%s-%s%s", runtime.GOOS, runtime.GOARCH, ext)
 	clashCorePath := filepath.Join(path, name)
-	d, _ := os.Getwd()
-	EchoLog("pwd is: ", d)
+	EchoLog("Clash Core Path Is: ", clashCorePath)
 	if !FileIsExist(clashCorePath) {
 		// for dev
 		d, _ := os.Getwd()
@@ -177,11 +176,9 @@ func startClash(args []string) {
 			EchoLog("Clash Core Is Not Exist")
 			return
 		}
+		EchoLog("Clash Core Path Is: ", clashCorePath)
 	}
 
-	fmt.Println(FileIsExist(clashCorePath))
-
-	EchoLog("Clash Core Path Is: ", clashCorePath)
 	EchoLog("Args Is: ", args)
 
 	Cmd = exec.Command(clashCorePath, args...)
