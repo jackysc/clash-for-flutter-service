@@ -29,7 +29,6 @@ var (
 	Logs        []string                   = make([]string, 0)
 	logsClients map[string]*websocket.Conn = make(map[string]*websocket.Conn)
 	Cmd         *exec.Cmd
-	logChan     chan string        = make(chan string)
 	upgrader    websocket.Upgrader = websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
@@ -45,7 +44,6 @@ type startArgs struct {
 
 func StartServer() error {
 	Server = &http.Server{Addr: "127.0.0.1:9089"}
-	go sendLogToWebSocket()
 	http.HandleFunc("/start", handleReqStart)
 	http.HandleFunc("/stop", handleReqStop)
 	http.HandleFunc("/info", hanldeReqInfo)
@@ -96,20 +94,30 @@ func hanldeReqLogs(w http.ResponseWriter, r *http.Request) {
 		fmt.Print("upgrade:", err)
 		return
 	}
-	defer c.Close()
-	defer delete(logsClients, r.RemoteAddr)
+
 	logsClients[r.RemoteAddr] = c
-	logChan <- "Connect Success"
+	fmt.Println("Connect Success:", r.RemoteAddr, "Connect Count:", len(logsClients))
+
+	c.WriteMessage(websocket.TextMessage, []byte("Connect Success"))
 	if len(Logs) > 0 {
-		logChan <- strings.Join(Logs, "\n")
+		c.WriteMessage(websocket.TextMessage, []byte(strings.Join(Logs, "\n")))
 	}
 
 	for {
-		_, _, err := c.NextReader()
+		_, msg, err := c.ReadMessage()
+
+		if string(msg) == "PING" {
+			c.WriteMessage(websocket.TextMessage, []byte("PONG"))
+		}
+
 		if err != nil {
 			break
 		}
 	}
+
+	c.Close()
+	delete(logsClients, r.RemoteAddr)
+	fmt.Println("UnConnect:", r.RemoteAddr, "Connect Count:", len(logsClients))
 }
 
 func handleReqStop(w http.ResponseWriter, r *http.Request) {
@@ -148,7 +156,7 @@ func handleReqStart(w http.ResponseWriter, r *http.Request) {
 		body, _ := ioutil.ReadAll(r.Body)
 		parmas := &startArgs{}
 		json.Unmarshal(body, parmas)
-		go startClash(parmas.Args)
+		startClashCore(parmas.Args)
 		res["code"] = 0
 	}
 	json, _ := json.Marshal(res)
@@ -156,7 +164,7 @@ func handleReqStart(w http.ResponseWriter, r *http.Request) {
 	w.Write(json)
 }
 
-func startClash(args []string) {
+func startClashCore(args []string) {
 	file, _ := os.Executable()
 	path := filepath.Dir(file)
 
@@ -188,10 +196,12 @@ func startClash(args []string) {
 	go listenLog(&stdout)
 	Cmd.Start()
 	Status = StatusRunning
-	s, _ := Cmd.Process.Wait()
-	Status = StatusStopped
-	Cmd = nil
-	EchoLog(s)
+	go func() {
+		s, _ := Cmd.Process.Wait()
+		Status = StatusStopped
+		Cmd = nil
+		EchoLog("Clash Core exit with code: ", s.ExitCode())
+	}()
 }
 
 func listenLog(i *io.ReadCloser) {
@@ -206,21 +216,14 @@ func listenLog(i *io.ReadCloser) {
 	}
 }
 
-func sendLogToWebSocket() {
-	for {
-		log := <-logChan
-		Logs = append(Logs, log)
-		if len(Logs) > MaxLog {
-			Logs = Logs[1:]
-		}
-		for _, c := range logsClients {
-			c.WriteMessage(websocket.TextMessage, []byte(log))
-		}
-	}
-}
-
 func EchoLog(logs ...interface{}) {
 	log := fmt.Sprint(logs...)
-	logChan <- log
+	Logs = append(Logs, log)
+	if len(Logs) > MaxLog {
+		Logs = Logs[1:]
+	}
+	for _, c := range logsClients {
+		c.WriteMessage(websocket.TextMessage, []byte(log))
+	}
 	fmt.Println(log)
 }
