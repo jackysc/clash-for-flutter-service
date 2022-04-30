@@ -11,5 +11,5 @@ mshta vbscript:createobject("shell.application").shellexecute("absolutePath...\c
 ## macos run as admin
 
 ```bash
-osascript -e 'do shell script "absolutePath.../clash-for-flutter-service-darwin-amd64.exe install start"'
+osascript -e 'do shell script "absolutePath.../clash-for-flutter-service-darwin-amd64.exe install start" with administrator privileges'
 ```
