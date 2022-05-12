@@ -7,24 +7,33 @@ GOBUILD=CGO_ENABLED=0 go build -trimpath -ldflags '-w -s -X "github.com/csj8520/
 
 PLATFORM_LIST = \
 	darwin-amd64 \
-	linux-amd64
+	darwin-arm64 \
+	linux-amd64 \
+	linux-arm64
 
 WINDOWS_ARCH_LIST = \
-	windows-amd64
+	windows-amd64 \
+	windows-arm64
 
-all: darwin-amd64 linux-amd64 windows-amd64
-
-# darwin-arm64:
-# 	GOARCH=arm64 GOOS=darwin $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
+all: darwin-amd64 darwin-arm64 linux-amd64 linux-arm64 windows-amd64 windows-arm64
 
 darwin-amd64:
 	GOARCH=amd64 GOOS=darwin $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
 
+darwin-arm64:
+	GOARCH=arm64 GOOS=darwin $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
+
 linux-amd64:
 	GOARCH=amd64 GOOS=linux $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
 
+linux-arm64:
+	GOARCH=arm64 GOOS=linux $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
+
 windows-amd64:
 	GOARCH=amd64 GOOS=windows $(GOBUILD) -o $(BINDIR)/$(NAME)-$@.exe
+
+windows-arm64:
+	GOARCH=arm64 GOOS=windows $(GOBUILD) -o $(BINDIR)/$(NAME)-$@.exe
 
 
 
