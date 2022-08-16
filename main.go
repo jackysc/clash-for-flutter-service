@@ -80,6 +80,7 @@ func main() {
 		case "install":
 			handleInstall(s)
 		case "uninstall":
+			handleStop(s)
 			handleUnInstall(s)
 		case "status":
 			handleStatus(s)
